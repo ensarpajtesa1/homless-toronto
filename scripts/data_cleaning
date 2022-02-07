@@ -1,0 +1,8 @@
+```
+#add new variables calculating the percentage of funding being used
+data$FUNDING_USED_BEDS <- (data$CAPACITY_ACTUAL_BED/data$CAPACITY_FUNDING_BED)*100
+data$FUNDING_USED_ROOMS <- (data$CAPACITY_ACTUAL_ROOM/data$CAPACITY_FUNDING_ROOM)*100
+#work with data to create 2 subsets one for beds and one for rooms
+data_beds <- data[ which(data$CAPACITY_TYPE == "Bed Based Capacity"), ]
+data_rooms <- data[ which(data$CAPACITY_TYPE == "Room Based Capacity"), ]
+```
