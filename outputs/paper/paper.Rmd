@@ -1,0 +1,185 @@
+---
+title: "Homeless Shelters Require the City's Attention, a Crisis Looming"
+author: "Ensar Pajtesa"
+date: "05/02/2022"
+output: pdf_document
+fontsize: 12pt
+bibliography: references.bib
+thanks: 'Code and data are available at:https://github.com/ensarpajtesa1/homless-toronto'
+abstract: On every political party's agenda is the topic of affordable housing, shelter and homelessness. In this report we will analyze the shelters provided for individuals experiencing homelessness and assess whether provided shelter meets demand. Data is refreshed daily on the Open Data Toronto to record information on all shelters provided within the geographic boundaries of the City of Toronto. Shelter occupancy is full to near full consistently and in need of additional expenditure to meet demand.
+---
+
+
+## Introduction
+
+Toronto is growing into one of the biggest metropolitan cities not only in North America but in the world. Toronto has a recorded population of 2,956,024 in 2018  and was ranked 2nd least affordable city in North America in terms of housing [@Hristova:2021aa]. These statistics coincide with many others not mentioned, such as substance abuse, domestic violence, orphanage etc. to produce a problem in large cities referred to as homelessness. 
+
+Homelessness at any scale is negative and at a constant need for help but in Toronto and northern cities when the colder months hit, it is life threatening to live without shelter in the outside elements. Shelters are provided throughout the city both managed by the City of Toronto itself as well as organizations funded by governments at the municipal, provincial and federal level. In this paper I will analyze data on the shelters throughout the city in terms of occupancy on a nightly basis to further analyze whether the allocated funding for this purpose is firstly, being used adequately by the organizations that are providing this service and secondly - barring any unforeseen data regarding misallocation of the funds - is this sufficient to withstand the demand for this service? 
+
+To conduct this analysis we will first assess the amount of space that is approved/funded to be used for shelters and compare this to the amount of space this is actually in use, showing us the allocation of this funding. Next we will proceed with the analysis of the occupancy rates and attempt to conclude on the status of the shelter system in Toronto.
+
+Bias: This includes only for what is reported by the center, there can be misreports and can be heavily influenced by a larger shelter
+
+
+## Data
+
+In order to analyze the data on Homelessness in Toronto I used `opendatatoronto` [@Gelfand:2020wd] and I needed to pull data from the "Daily Shelter & Overnight Service Occupancy & Capacity" [@Hristova:2021aa]. This is a dataset which records the inputs of each individual shelter on a nightly basis and creates an output. This output is highlighted by some key variables including but not limited to the following:
+
+Occupancy Date - The date of which those data points correspond to
+
+Program Area - The program which this specific shelter is allocated to. This variable is a character string that names the program
+
+Sector - Gender/Sociological group that the shelter is geared towards
+
+Service User Count - Total spaces that this shelter provides
+
+Capacity Type - This is a new variable for this dataset which divides the shelters into groups that provide space on a per-bed basis and ones that provide space on a per-room basis
+
+Capacity Funding & Capacity Actual - Each of these variables notes the total funding they receive noted on a per-room and per-bed basis, as well as the actual number of rooms and beds that this shelter offers
+
+Occupancy - This marks the percentage of the shelter occupied, again split into a per-room ad per-bed basis. This variable takes two variables - Occupied and Total and uses them to calculate the percentage.
+
+For this analysis and for simplicity purposes we use only the dates from January 1, 2022 to February 5, 2022 (Date of the Report). As our goal is to assess in the winter months these dates serve our purpose elegantly. This data relies on the input of single shelters to the collective and therefore can be\ biased based on accuracy of reports sent nightly.
+
+For this analysis we are using `R` [@Team:2020wf], `tidyverse` [@Wickham:2019vq] and `dplyr` [@Wickham:2021vf] functions. For the creation of figures and tables we will use `ggplot2` [@Wickham:2016tn], `kableextra` [@Zhu:2020vy] and `reshape2` [@Wickham:2007tu]. The package `knitr` [@Xie:2021vq] is used to generate the R markdown report. 
+
+To begin with the data cleaning process I wanted to make sure to include for both, shelters that measure capacity by bed and ones that measure by rooms. So I created 2 datasets which each measure either capacity by beds or by rooms and omitted the other. These two subsets were used to create a new variable in each set which calculated the percentage of the funding that was being offered. Figure 1 displays the density histogram of the percentage of the funding that is being offered for beds. While Figure 2 does the same but for roo capacity.
+
+```{r setup, include=FALSE}
+library(opendatatoronto)
+library(dplyr)
+library(knitr)
+library(tidyverse)
+library(kableExtra)
+library(reshape2)
+ 
+# get package
+package <- show_package("21c83b32-d5a8-4106-a54f-010dbe49f6f2")
+package
+ 
+# get all resources for this package
+resources <- list_package_resources("21c83b32-d5a8-4106-a54f-010dbe49f6f2")
+ 
+# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+ 
+# load the first datastore resource as a sample
+data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+
+```
+
+
+```{r, echo=FALSE}
+
+#add new variables calculating the percentage of funding being used
+
+data$FUNDING_USED_BEDS <- (data$CAPACITY_ACTUAL_BED/data$CAPACITY_FUNDING_BED)*100
+
+data$FUNDING_USED_ROOMS <- (data$CAPACITY_ACTUAL_ROOM/data$CAPACITY_FUNDING_ROOM)*100
+
+#work with data to create 2 subsets one for beds and one for rooms
+
+data_beds <- data[ which(data$CAPACITY_TYPE == "Bed Based Capacity"), ]
+
+data_rooms <- data[ which(data$CAPACITY_TYPE == "Room Based Capacity"), ]
+
+```
+
+
+```{r, echo=FALSE}
+ggplot(data_beds, aes(x=FUNDING_USED_BEDS)) + 
+ geom_histogram(aes(y=..density..), colour="red", fill="light pink", binwidth = 2)+
+ geom_density(alpha=.2, fill="blue") +
+  theme_bw()+
+  labs(x = "Percentage of Allocated Funding Used", y = "Density", title = "Percentage of Funding Used - Bed Measured Capacity", caption = "*Figure 1")
+ggplot(data_rooms, aes(x=FUNDING_USED_ROOMS)) + 
+ geom_histogram(aes(y=..density..), colour="red", fill="light pink", binwidth = 5)+
+ geom_density(alpha=.2, fill="blue")+
+  theme_bw()+
+  labs(x = "Percentage of Allocated Funding Used", y = "Density", title = "Percentage of Funding Used - Room Measured Capacity", caption = "*Figure 2")
+
+```
+
+
+As we can see from the two graphs the heavy emphasis is on 100% of funding allocation. This means that a majority of the shelters are offering all of the rooms and beds that they have been provided funding for. Some of the shelters offering rooms are operating over funding which means they are offering even more that what was provided to them either out of sheer need or private donations. This was an important step in our analysis because without confirming that the funding is being used as allocated the rest of the analysis would be rendered invalid.
+
+
+Below in `Table 1` we find a table with the mean occupancy in 2022 on a nightly basis. It is evident that the capacity is near max throughout the the first moth of this year. This may have data points pulling the mean up however so in `Figure 3` we analyse the time series of occupancy rates and can notice that throughout almost every night there is an occupancy percentage of greater than 95%. This shows us that shelter homes are in fact having trouble with capacity limits.
+
+```{r, echo=FALSE}
+
+# create a table displaying the average occupancy percentage of the shelters in 2022
+
+meanbeds <- mean(data_beds$OCCUPANCY_RATE_BEDS)
+meanrooms <- mean(data_rooms$OCCUPANCY_RATE_ROOMS)
+
+Capacity_Type <- c('Bed Occupancy','Room Occupancy')
+Occupancy_Rate_Mean <- c(meanbeds, meanrooms)
+
+mean.data <- data.frame(Capacity_Type, Occupancy_Rate_Mean)
+
+knitr::kable(
+  mean.data,
+  col.names = c('Capacity Type', 'Occupancy Rate Mean (%)'),
+  caption = "Table 1 - Mean Occupancy Level"
+)  %>%
+  kable_styling()
+
+# create a graph showing the mean occupancy time series per day, every day of 2022
+
+data_mean_beds <- data_beds %>% group_by(OCCUPANCY_DATE) %>% summarise(mean_occupancy_beds = mean(OCCUPANCY_RATE_BEDS))
+
+data_mean_rooms <- data_rooms %>% group_by(OCCUPANCY_DATE) %>% summarise(mean_occupancy_rooms = mean(OCCUPANCY_RATE_ROOMS))
+
+data_means <- merge(data_mean_beds, data_mean_rooms, by.x = "OCCUPANCY_DATE")
+
+data_means_long <- melt(data_means, id.vars = "OCCUPANCY_DATE")
+
+data_means_long$DAYS <- c(seq.int(1, 36), seq.int(1, 36))
+
+labels <- c(mean_occupancy_beds = "Bed Capacity Type", mean_occupancy_rooms = "Room Capacity Type")
+
+ggplot(data_means_long, aes(x = DAYS, y = value, col = variable))+
+  labs(x = "Days in 2022 (Jan 01 - Feb 05)", y = "Mean Occupancy in Shelters (%)", title = "Mean Occupancy in Shelters Since Start of 2021", caption = "*Figure 3")+
+  geom_line()+
+  scale_color_discrete(labels = labels)+
+  theme_bw()
+
+
+
+
+```
+
+
+What might be even more interesting in the data analysis is the fact that it is noticeable that many of these shelters have been brought into the supply with specific COVID-19 Emergency Funding. This statistic shows us that there are many shelters that have been introduced due to the pandemic and with pandemic funding. These may not be permanent fixtures. `Figure 4` displays the sheer number of shelters as COVID-19 Emergency program.
+
+
+```{r, echo=FALSE}
+
+#Creating a graph to show the number of spaces offered on Febraury 05 based on the type of program it is offered for
+
+data_today <- data[ which(data$OCCUPANCY_DATE == "2022-02-05"), ]
+
+data_sum_grouping <- data_today %>% group_by(PROGRAM_AREA) %>% summarise(TOTAL_SPACE = sum(SERVICE_USER_COUNT))
+
+ggplot(data=data_sum_grouping, aes(x=PROGRAM_AREA, y=TOTAL_SPACE,  fill = PROGRAM_AREA)) +
+  geom_bar(stat="identity")+
+  labs(x = "Program Name", y = "Total Space Offered", title = "Total Number of Shelter Spaces Offered By Program", caption = "*Figure 4")+
+  theme_bw()+
+  scale_fill_manual("Legend", values = c("Base Shelter and Overnight Services System" = "blue", "COVID-19 Response" = "orange", "Temporary Refugee Response" = "red", "Winter Programs" = "dark green"))+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  geom_text(
+    aes(label = stat(y), group = PROGRAM_AREA), 
+    stat = 'summary', fun = sum, vjust = -0.3)
+
+
+```
+
+# Conclusion & Discussion
+
+We can see in our data analysis that consistently the shelters in Toronto are experiencing high rates of occupancy and can even be said these a majority of these shelters are full. A good portion of these shelters are being offered through COVID-19 Emergency benefit fund leading us to infer that if these are not permanent we could be facing a crisis for highly overloaded shelters during winter months
+
+\pagebreak
+
+
